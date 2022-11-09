@@ -1,0 +1,16 @@
+{
+  "config": {
+    "classmap-authoritative": true
+  },
+  "autoload": {
+    "psr-4": {
+      "Knowitop\\iTop\\Extension\\DashletCalendar\\": "src"
+    }
+  },
+  "name": "knowitop/knowitop-dashlet-calendar",
+  "type": "itop-extension",
+  "description": "Dashlet Calendar module",
+  "require": {
+    "composer-runtime-api": "^2.0"
+  }
+}

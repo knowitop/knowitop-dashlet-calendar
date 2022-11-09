@@ -1,19 +1,32 @@
 <?php
 
+namespace Knowitop\iTop\Extension\DashletCalendar;
+
+use ApplicationContext;
+use AttributeDateTime;
+use DateTime;
+use DBObjectSearch;
+use DBObjectSet;
+use Exception;
+use Expression;
+use IssueLog;
+use LoginWebPage;
+use utils;
+
 require_once('../../approot.inc.php');
 
 try {
     require_once(APPROOT . '/application/startup.inc.php');
     require_once(APPROOT . '/application/loginwebpage.class.inc.php');
     LoginWebPage::DoLogin(); // Check user rights and prompt if needed
-    $sStartIntervalDate = utils::ReadParam('start', '');
-    $sStartDateAttr = utils::ReadParam('start_attr', '');
-    $sEndIntervalDate = utils::ReadParam('end', '');
-    $sEndDateAttr = utils::ReadParam('end_attr', '');
-    $bShowUnfinished = (bool)utils::ReadParam('unfinished', false);
-    $sTitleAttr = utils::ReadParam('title_attr', '');
-    $sDescriptionAttr = utils::ReadParam('description_attr', '');
-    $sFilter = utils::ReadParam('filter', '', false, 'string');
+    $sStartIntervalDate = utils::ReadParam('start', '', false, utils::ENUM_SANITIZATION_FILTER_STRING);
+    $sStartDateAttr = utils::ReadParam('start_attr', '', false, utils::ENUM_SANITIZATION_FILTER_FIELD_NAME);
+    $sEndIntervalDate = utils::ReadParam('end', false, false, utils::ENUM_SANITIZATION_FILTER_STRING);
+    $sEndDateAttr = utils::ReadParam('end_attr', '', false, utils::ENUM_SANITIZATION_FILTER_FIELD_NAME);
+    $bShowUnfinished = (bool)utils::ReadParam('unfinished', false, false, utils::ENUM_SANITIZATION_FILTER_INTEGER);
+    $sTitleAttr = utils::ReadParam('title_attr', '', false, utils::ENUM_SANITIZATION_FILTER_FIELD_NAME);
+    $sDescriptionAttr = utils::ReadParam('description_attr', '', false, utils::ENUM_SANITIZATION_FILTER_FIELD_NAME);
+    $sFilter = utils::ReadParam('filter', '', false, utils::ENUM_SANITIZATION_FILTER_STRING);
     $oFilter = DBObjectSearch::unserialize(base64_decode($sFilter));
     $sClass = $oFilter->GetClassAlias();
     if ($sEndDateAttr && !$bShowUnfinished)
@@ -55,8 +68,9 @@ try {
         $sEndDate = '';
         if ($sEndDateAttr) {
             $sEndDate = $oObj->Get($sEndDateAttr);
-            // TODO: Date format
-            if (!$sEndDate && $bShowUnfinished) $sEndDate = date_format(new DateTime(), 'Y-m-d H:i:s');
+            if (!$sEndDate && $bShowUnfinished) {
+				$sEndDate = date_format(new DateTime(), AttributeDateTime::GetInternalFormat());
+            }
         }
         $aEvent['end'] = $sEndDate;
         $aEvent['url'] = ApplicationContext::MakeObjectUrl(get_class($oObj), $oObj->GetKey());
@@ -65,5 +79,6 @@ try {
     $jsonEvents = json_encode($aEvents);
     echo $jsonEvents;
 } catch (Exception $e) {
-    echo $e->getMessage();
+	IssueLog::Error($e->getMessage());
+	echo htmlentities($e->getMessage(), ENT_QUOTES, 'utf-8');
 }

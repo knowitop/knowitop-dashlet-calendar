@@ -4,25 +4,25 @@
 
 This module adds the awesome [FullCalendar](https://fullcalendar.io) dashlet to use in iTop dashboards and allows you to display on it an any object that has a date field.
 
-![dashlet-calendar.png](images/dashlet_calendar.png)
+![dashboard-calendar.png](docs/dashboard-calendar.png)
 
 ## Installation
 
 Install like any other extension. 
 
- - If you have ZIP downloaded extract and rename folder "dashlet-calendar-master" to "dashlet-calendar".
- - Copy "dashlet-calendar" folder to itop/extensions folder and go to http://localhost/setup/.
+ - If you have ZIP downloaded extract and rename folder "knowitop-dashlet-calendar-master" to "knowitop-dashlet-calendar".
+ - Copy "knowitop-dashlet-calendar" folder to itop/extensions folder and go to http://localhost/setup/.
  - Select "Upgrade an existing iTop instance" and follow the wizard.
 
 ## Usage the calendar
 
-Only a small part of FullCalendar functionality is implemented in the widget. Currently you can't add new events directly from the widget and use dragging to change dates. But it's planned in future releases. So stay tuned!
+Only a small part of FullCalendar functionality is implemented in the widget. Currently, you can't add new events directly from the widget and use dragging to change dates. But it's planned in future releases. So stay tuned!
 
 To add a new calendar open the dashboard editor and drag the calendar icon into a free space. Then you have to configure the calendar and save the dashboard. You can add several calendars on any dashboard.
 
 Let's see what we have:
 
-![dashlet-calendar-edit.png](images/dashlet_calendar_edit.png)
+![dashboard-calendar-edit.png](docs/dashboard-calendar-edit.png)
 
 Here we have some general settings of the calendar and three separated sets of events. Each set of events may be configured independently of others. So you can display for example planned Changes, open Work Orders and Servers which have moved to production in this month in one calendar.
 
@@ -51,7 +51,7 @@ Event set settings:
 
 You can change standard colors for events in the configuration file:
 ```
-'dashlet-calendar' => array (
+'knowitop-dashlet-calendar' => array (
         'colors' => array (
           'blue' => '#006699',
           'cyan' => '#009999',
