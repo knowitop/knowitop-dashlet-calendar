@@ -22,8 +22,8 @@ class ComposerStaticInit513742419b4f02d959062f66f26cdb82
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Knowitop\\iTop\\Extension\\DashletCalendar\\Hook\\DashletCalendarStaticContent' => __DIR__ . '/../..' . '/src/Hook/DashletCalendarStaticContent.php',
         'Knowitop\\iTop\\Extension\\DashletCalendar\\ModuleConfig' => __DIR__ . '/../..' . '/src/ModuleConfig.php',
+        'Knowitop\\iTop\\Extension\\DashletCalendar\\UI\\CalendarBlock' => __DIR__ . '/../..' . '/src/UI/CalendarBlock.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

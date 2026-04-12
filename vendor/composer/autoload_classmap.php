@@ -7,6 +7,6 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
-    'Knowitop\\iTop\\Extension\\DashletCalendar\\Hook\\DashletCalendarStaticContent' => $baseDir . '/src/Hook/DashletCalendarStaticContent.php',
     'Knowitop\\iTop\\Extension\\DashletCalendar\\ModuleConfig' => $baseDir . '/src/ModuleConfig.php',
+    'Knowitop\\iTop\\Extension\\DashletCalendar\\UI\\CalendarBlock' => $baseDir . '/src/UI/CalendarBlock.php',
 );

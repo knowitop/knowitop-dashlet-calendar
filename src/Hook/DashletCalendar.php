@@ -5,12 +5,12 @@
 
 use Combodo\iTop\Application\UI\Base\Component\Panel\PanelUIBlockFactory;
 use Knowitop\iTop\Extension\DashletCalendar\ModuleConfig;
+use Knowitop\iTop\Extension\DashletCalendar\UI\CalendarBlock;
 
 class DashletCalendar extends Dashlet
 {
-	protected $sModuleName;
-	protected $sAjaxUrl;
-	protected $iEventResourcesCount;
+	protected string $sAjaxUrl;
+	protected int $iEventResourcesCount;
 
 	public function __construct($oModelReflection, $sId)
 	{
@@ -30,9 +30,8 @@ class DashletCalendar extends Dashlet
 		$this->aProperties['description_attr_1'] = '';
 		$this->aProperties['color_1'] = $this->GetDefaultColor();
 
-		$this->iEventResourcesCount = ModuleConfig::Get('resources_count', 3);
-		for ($i = 2; $i <= $this->iEventResourcesCount; $i++)
-		{
+		$this->iEventResourcesCount = (int)ModuleConfig::Get('resources_count', 3);
+		for ($i = 2; $i <= $this->iEventResourcesCount; $i++) {
 			$this->aProperties['enabled_'.$i] = false;
 			$this->aProperties['query_'.$i] = 'SELECT Ticket';
 			$this->aProperties['start_attr_'.$i] = 'start_date';
@@ -43,168 +42,51 @@ class DashletCalendar extends Dashlet
 			$this->aProperties['color_'.$i] = $this->GetDefaultColor();
 		}
 
-		$this->sAjaxUrl = ModuleConfig::GetRootUrl().'ajax.php';
+		$this->sAjaxUrl = ModuleConfig::GetRootUrl().'/ajax.php';
 	}
 
-	static public function GetInfo()
-	{
-		return array(
-			'label' => Dict::S('UI:DashletCalendar:Label'),
-			'icon' => ModuleConfig::GetImgAssetsUrl(false).'icons8-calendar-32.png',
-			'description' => Dict::S('UI:DashletCalendar:Description'),
-		);
-	}
-
-	public function Render($oPage, $bEditMode = false, $aExtraParams = array())
-	{
-		$aResources = array();
-		for ($i = 1; $i <= $this->iEventResourcesCount; $i++)
-		{
-			if (!$this->aProperties['enabled_'.$i])
-			{
-				continue;
-			}
-			$aResources[] = array(
-				'url' => $this->sAjaxUrl,
-				'method' => 'POST',
-				'format' => 'json',
-				'color' => $this->aProperties['color_'.$i],
-				'extraParams' => array(
-					'filter' => base64_encode(DBObjectSearch::FromOQL($this->aProperties['query_'.$i])->serialize()),
-					'start_attr' => $this->aProperties['start_attr_'.$i],
-					'end_attr' => $this->aProperties['end_attr_'.$i],
-					'unfinished' => $this->aProperties['unfinished_'.$i] ? 1 : 0,
-					'title_attr' => $this->aProperties['title_attr_'.$i],
-					'description_attr' => $this->aProperties['description_attr_'.$i],
-				),
-			);
-		}
-		$sLanguage = substr(strtolower(trim(UserRights::GetUserLanguage())), 0, 2);
-		$aViews = array(
-			'month' => 'dayGridMonth',
-			'week' => $this->aProperties['agenda_week'] ? 'timeGridWeek' : 'dayGridWeek',
-			'day' => $this->aProperties['agenda_day'] ? 'timeGridDay' : 'dayGridDay',
-			'list' => $this->aProperties['list_period'],
-		);
-		$sDefaultView = $aViews[$this->aProperties['default_view']];
-		$aCalendarDefaultProps = [
-			'locale' => $sLanguage,
-			'headerToolbar' => [
-				'left' => 'prev,today,next',
-				'center' => 'title',
-				'right' => implode(',', $aViews)
-			],
-			'initialView' => $sDefaultView,
-		];
-		$aCalendarUserProps = ModuleConfig::Get('fullcalendar_options', []);
-		$aCalendarProps = array_replace_recursive($aCalendarDefaultProps, $aCalendarUserProps);
-		$aCalendarProps['eventSources'] = $aResources;
-		$sCalendarProps = json_encode($aCalendarProps);
-		$sCalendarElemId = 'calendar_'.($bEditMode ? 'edit_' : '').$this->sId;
-		$oPage->add_ready_script(
-			<<<EOF
-	var calendarEl = document.getElementById('$sCalendarElemId');
-    var calendar = new FullCalendar.Calendar(calendarEl, $sCalendarProps);
-    calendar.render();
-EOF
-		);
-		$sHtmlTitle = htmlentities(Dict::S($this->aProperties['title']), ENT_QUOTES, 'UTF-8'); // done in the itop block
-		$oPanel = PanelUIBlockFactory::MakeNeutral(Dict::S(str_replace('_', ':', $sHtmlTitle)))
-			->SetIcon(ModuleConfig::GetImgAssetsUrl().'icons8-calendar-48.png');
-		$oPanel->AddHtml('<div id="'.$sCalendarElemId.'" class="font-combodo-unset"></div>');
-		// Unset .fc css from font-combodo.css that clashes with .fc fullcalendar style.
-		$oPanel->AddCssFileRelPath(ModuleConfig::GetCssAssetsUrl(false).'font-combodo-unset.css');
-
-		return $oPanel;
-	}
-
-	protected function GetDateAttributes($sOql)
-	{
-		$oQuery = $this->oModelReflection->GetQuery($sOql);
-		$sClass = $oQuery->GetClass();
-		$aDateAttCodes = array();
-		foreach ($this->oModelReflection->ListAttributes($sClass) as $sAttCode => $sAttType)
-		{
-			if (is_subclass_of($sAttType, 'AttributeDateTime') || $sAttType == 'AttributeDateTime')
-			{
-				$sLabel = $this->oModelReflection->GetLabel($sClass, $sAttCode);
-				$aDateAttCodes[$sAttCode] = $sLabel;
-			}
-		}
-		asort($aDateAttCodes);
-
-		return $aDateAttCodes;
-	}
-
-	protected function GetEventTextOptions($sOql)
-	{
-		$oQuery = $this->oModelReflection->GetQuery($sOql);
-		$sClass = $oQuery->GetClass();
-		$aTitleAttrs = array();
-		foreach ($this->oModelReflection->ListAttributes($sClass) as $sAttCode => $sAttType)
-		{
-			if ($sAttType == 'AttributeLinkedSet')
-			{
-				continue;
-			}
-			if (is_subclass_of($sAttType, 'AttributeLinkedSet'))
-			{
-				continue;
-			}
-			if ($sAttType == 'AttributeFriendlyName')
-			{
-				continue;
-			}
-			if (is_subclass_of($sAttType, 'AttributeFriendlyName'))
-			{
-				continue;
-			}
-			if ($sAttType == 'AttributeExternalField')
-			{
-				continue;
-			}
-			if (is_subclass_of($sAttType, 'AttributeExternalField'))
-			{
-				continue;
-			}
-			if ($sAttType == 'AttributeOneWayPassword')
-			{
-				continue;
-			}
-
-			$sLabel = $this->oModelReflection->GetLabel($sClass, $sAttCode);
-			$aTitleAttrs[$sAttCode] = $sLabel;
-		}
-		asort($aTitleAttrs);
-
-		return $aTitleAttrs;
-	}
-
-	protected function GetDefaultColor()
+	protected function GetDefaultColor(): string|null
 	{
 		$aColors = array_keys($this->GetColorOptions());
 
 		return array_shift($aColors);
 	}
 
-	protected function GetColorOptions()
+	protected function GetColorOptions(): array
 	{
 		$aColorOpts = array();
 		$aColors = ModuleConfig::Get('colors', array('grey' => 'grey'));
-		foreach ($aColors as $name => $value)
-		{
-			if (is_integer($name))
-			{
+		foreach ($aColors as $name => $value) {
+			if (is_int($name)) {
 				$name = $value;
-			}
-			elseif (!$value)
-			{
+			} elseif (!$value) {
 				$value = $name;
 			}
 			$aColorOpts[$value] = Dict::S('UI:DashletCalendar:Event:Prop-Color:'.$name);
 		}
 
 		return $aColorOpts;
+	}
+
+	public static function GetInfo()
+	{
+		return array(
+			'label' => Dict::S('UI:DashletCalendar:Label'),
+			'icon' => ModuleConfig::GetImgAssetsUrl(false).'/icons8-calendar-32.png',
+			'description' => Dict::S('UI:DashletCalendar:Description'),
+		);
+	}
+
+	public function Render($oPage, $bEditMode = false, $aExtraParams = array())
+	{
+		$sHtmlTitle = htmlentities(Dict::S($this->aProperties['title']), ENT_QUOTES, 'UTF-8'); // done in the itop block
+		$oPanel = PanelUIBlockFactory::MakeNeutral(Dict::S(str_replace('_', ':', $sHtmlTitle)))
+			->SetIcon(ModuleConfig::GetImgAssetsUrl().'/icons8-calendar-48.png');
+		$sCalendarElemId = 'calendar_'.($bEditMode ? 'edit_' : '').$this->sId;
+		$oBlock = new CalendarBlock($sCalendarElemId, $this->MakeFullcalendarOptions());
+		$oPanel->AddSubBlock($oBlock);
+
+		return $oPanel;
 	}
 
 	public function GetPropertiesFields(DesignerForm $oForm)
@@ -245,8 +127,7 @@ EOF
 		$oField = new DesignerBooleanField('agenda_day', Dict::S('UI:DashletCalendar:Prop-Agenda-Day'), $this->aProperties['agenda_day']);
 		$oForm->AddField($oField);
 
-		for ($i = 1; $i <= $this->iEventResourcesCount; $i++)
-		{
+		for ($i = 1; $i <= $this->iEventResourcesCount; $i++) {
 
 			$oForm->StartFieldSet(Dict::Format('UI:DashletCalendar:EventSet', $i));
 
@@ -262,8 +143,7 @@ EOF
 			$oForm->AddField($oField);
 
 			// Event start and end dates
-			try
-			{
+			try {
 				// build the list of possible values (attribute codes + ...)
 				$aDateAttCodes = $this->GetDateAttributes($this->aProperties['query_'.$i]);
 				$oFieldStart = new DesignerComboField('start_attr_'.$i, Dict::S('UI:DashletCalendar:Event:Prop-Start'),
@@ -275,8 +155,7 @@ EOF
 					$this->aProperties['end_attr_'.$i]);
 				$oFieldEnd->SetAllowedValues($aDateAttCodes);
 			}
-			catch (Exception $e)
-			{
+			catch (Exception $e) {
 				$oFieldStart = new DesignerTextField('start_attr_'.$i, Dict::S('UI:DashletCalendar:Event:Prop-Start'),
 					$this->aProperties['start_attr_'.$i]);
 				$oFieldStart->SetReadOnly();
@@ -292,8 +171,7 @@ EOF
 			$oForm->AddField($oField);
 
 			// Event title and description
-			try
-			{
+			try {
 				// build the list of possible values (attribute codes + ...)
 				$aAttCodes = $this->GetEventTextOptions($this->aProperties['query_'.$i]);
 				$oFieldTitle = new DesignerComboField('title_attr_'.$i, Dict::S('UI:DashletCalendar:Event:Prop-Title'),
@@ -305,8 +183,7 @@ EOF
 					$this->aProperties['description_attr_'.$i]);
 				$oFieldDescription->SetAllowedValues($aAttCodes);
 			}
-			catch (Exception $e)
-			{
+			catch (Exception $e) {
 				$oFieldTitle = new DesignerTextField('title_attr_'.$i, Dict::S('UI:DashletCalendar:Event:Prop-Title'),
 					$this->aProperties['title_attr_'.$i]);
 				$oFieldTitle->SetReadOnly();
@@ -329,12 +206,9 @@ EOF
 
 	public function Update($aValues, $aUpdatedFields)
 	{
-		for ($i = 1; $i <= $this->iEventResourcesCount; $i++)
-		{
-			if (in_array('query_'.$i, $aUpdatedFields))
-			{
-				try
-				{
+		for ($i = 1; $i <= $this->iEventResourcesCount; $i++) {
+			if (in_array('query_'.$i, $aUpdatedFields)) {
+				try {
 					$sCurrQuery = $aValues['query_'.$i];
 					$oCurrSearch = $this->oModelReflection->GetQuery($sCurrQuery);
 					$sCurrClass = $oCurrSearch->GetClass();
@@ -343,16 +217,14 @@ EOF
 					$oPrevSearch = $this->oModelReflection->GetQuery($sPrevQuery);
 					$sPrevClass = $oPrevSearch->GetClass();
 
-					if ($sCurrClass != $sPrevClass)
-					{
+					if ($sCurrClass != $sPrevClass) {
 						$this->bFormRedrawNeeded = true;
 						// wrong but not necessary - unset($aUpdatedFields['group_by']);
 						//$this->aProperties['start_attr_'.$i] = '';
 						//$this->aProperties['end_attr_'.$i] = '';
 					}
 				}
-				catch (Exception $e)
-				{
+				catch (Exception $e) {
 					$this->bFormRedrawNeeded = true;
 				}
 			}
@@ -360,5 +232,103 @@ EOF
 		$oDashlet = parent::Update($aValues, $aUpdatedFields);
 
 		return $oDashlet;
+	}
+
+	protected function MakeFullcalendarOptions(): array
+	{
+		$aResources = array();
+		for ($i = 1; $i <= $this->iEventResourcesCount; $i++) {
+			if (!$this->aProperties['enabled_'.$i]) {
+				continue;
+			}
+			$aResources[] = array(
+				'url' => $this->sAjaxUrl,
+				'method' => 'POST',
+				'format' => 'json',
+				'color' => $this->aProperties['color_'.$i],
+				'extraParams' => array(
+					'filter' => base64_encode(DBObjectSearch::FromOQL($this->aProperties['query_'.$i])->serialize()),
+					'start_attr' => $this->aProperties['start_attr_'.$i],
+					'end_attr' => $this->aProperties['end_attr_'.$i],
+					'unfinished' => $this->aProperties['unfinished_'.$i] ? 1 : 0,
+					'title_attr' => $this->aProperties['title_attr_'.$i],
+					'description_attr' => $this->aProperties['description_attr_'.$i],
+				),
+			);
+		}
+		$sLanguage = strtolower(substr(trim(UserRights::GetUserLanguage()), 0, 2));
+		$aViews = array(
+			'month' => 'dayGridMonth',
+			'week' => $this->aProperties['agenda_week'] ? 'timeGridWeek' : 'dayGridWeek',
+			'day' => $this->aProperties['agenda_day'] ? 'timeGridDay' : 'dayGridDay',
+			'list' => $this->aProperties['list_period'],
+		);
+		$sDefaultView = $aViews[$this->aProperties['default_view']];
+		$aCalendarDefaultProps = [
+			'locale' => $sLanguage,
+			'headerToolbar' => [
+				'left' => 'prev,today,next',
+				'center' => 'title',
+				'right' => implode(',', $aViews),
+			],
+			'initialView' => $sDefaultView,
+		];
+		$aCalendarUserProps = ModuleConfig::Get('fullcalendar_options', []);
+		$aCalendarProps = array_replace_recursive($aCalendarDefaultProps, $aCalendarUserProps);
+		$aCalendarProps['eventSources'] = $aResources;
+
+		return $aCalendarProps;
+	}
+
+	protected function GetDateAttributes($sOql): array
+	{
+		$oQuery = $this->oModelReflection->GetQuery($sOql);
+		$sClass = $oQuery->GetClass();
+		$aDateAttCodes = array();
+		foreach ($this->oModelReflection->ListAttributes($sClass) as $sAttCode => $sAttType) {
+			if (is_subclass_of($sAttType, 'AttributeDateTime') || $sAttType == 'AttributeDateTime') {
+				$sLabel = $this->oModelReflection->GetLabel($sClass, $sAttCode);
+				$aDateAttCodes[$sAttCode] = $sLabel;
+			}
+		}
+		asort($aDateAttCodes);
+
+		return $aDateAttCodes;
+	}
+
+	protected function GetEventTextOptions($sOql): array
+	{
+		$oQuery = $this->oModelReflection->GetQuery($sOql);
+		$sClass = $oQuery->GetClass();
+		$aTitleAttrs = array();
+		foreach ($this->oModelReflection->ListAttributes($sClass) as $sAttCode => $sAttType) {
+			if ($sAttType == 'AttributeLinkedSet') {
+				continue;
+			}
+			if (is_subclass_of($sAttType, 'AttributeLinkedSet')) {
+				continue;
+			}
+			if ($sAttType == 'AttributeFriendlyName') {
+				continue;
+			}
+			if (is_subclass_of($sAttType, 'AttributeFriendlyName')) {
+				continue;
+			}
+			if ($sAttType == 'AttributeExternalField') {
+				continue;
+			}
+			if (is_subclass_of($sAttType, 'AttributeExternalField')) {
+				continue;
+			}
+			if ($sAttType == 'AttributeOneWayPassword') {
+				continue;
+			}
+
+			$sLabel = $this->oModelReflection->GetLabel($sClass, $sAttCode);
+			$aTitleAttrs[$sAttCode] = $sLabel;
+		}
+		asort($aTitleAttrs);
+
+		return $aTitleAttrs;
 	}
 }
